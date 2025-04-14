@@ -24,17 +24,25 @@ jobs:
       - name: Create music directory
         run: mkdir -p music
 
+      # 调试目录结构
+      - name: Debug Directory
+        run: ls -R
+
       # 获取 Issues 并生成 index.html
       - name: Generate index.html
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node .github/scripts/generate-index.js
 
+      # 调试生成的文件
+      - name: Check Generated File
+        run: ls -l music/ || echo "music/ directory is empty"
+
       # 提交生成的 index.html
       - name: Commit and Push
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-          git add music/index.html
+          git add music/index.html || echo "No index.html to add"
           git commit -m "Update index.html with Issues content" || echo "No changes to commit"
-          git push
+          git push || echo "No changes to push"
