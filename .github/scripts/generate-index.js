@@ -12,7 +12,7 @@ async function generateIndex() {
   });
   const issues = await response.json();
 
-  // 生成 HTML
+  // 生成帖子 HTML
   let postsHtml = '';
   if (issues.length === 0) {
     postsHtml = '<p>暂无博客文章</p>';
@@ -112,7 +112,8 @@ async function generateIndex() {
 </html>
   `;
 
-  console.log(html);
+  // 写入 music/index.html
+  fs.writeFileSync('music/index.html', html);
 }
 
-generateIndex();
+generateIndex().catch(console.error);
