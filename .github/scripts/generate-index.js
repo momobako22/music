@@ -1,36 +1,44 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const fetch = require('node-fetch');
 const marked = require('marked');
 
 async function generateIndex() {
-  // 获取 Issues
-  const response = await fetch('https://api.github.com/repos/momobako22/momobako22.github.io/issues', {
-    headers: {
-      Authorization: `token ${process.env.GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github.v3+json'
+  try {
+    // 获取 Issues
+    console.log('Fetching Issues...');
+    const response = await fetch('https://api.github.com/repos/momobako22/momobako22.github.io/issues', {
+      headers: {
+        Authorization: `token ${process.env.GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.statusText}`);
     }
-  });
-  const issues = await response.json();
 
-  // 生成帖子 HTML
-  let postsHtml = '';
-  if (issues.length === 0) {
-    postsHtml = '<p>暂无博客文章</p>';
-  } else {
-    postsHtml = issues.map(issue => `
-      <div class="post-card">
-        <h2>${issue.title}</h2>
-        <div class="meta">发布于 ${new Date(issue.created_at).toLocaleDateString('zh-CN')}</div>
-        <div class="content">${marked.parse(issue.body || '')}</div>
-        <div class="labels">
-          ${issue.labels.map(label => `<span class="label">${label.name}</span>`).join('')}
+    const issues = await response.json();
+    console.log(`Fetched ${issues.length} issues`);
+
+    // 生成帖子 HTML
+    let postsHtml = '';
+    if (issues.length === 0) {
+      postsHtml = '<p>暂无博客文章</p>';
+    } else {
+      postsHtml = issues.map(issue => `
+        <div class="post-card">
+          <h2>${issue.title}</h2>
+          <div class="meta">发布于 ${new Date(issue.created_at).toLocaleDateString('zh-CN')}</div>
+          <div class="content">${marked.parse(issue.body || '')}</div>
+          <div class="labels">
+            ${issue.labels.map(label => `<span class="label">${label.name}</span>`).join('')}
+          </div>
         </div>
-      </div>
-    `).join('');
-  }
+      `).join('');
+    }
 
-  // 完整 HTML
-  const html = `
+    // 完整 HTML
+    const html = `
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -110,10 +118,16 @@ async function generateIndex() {
     </div>
 </body>
 </html>
-  `;
+    `;
 
-  // 写入 music/index.html
-  fs.writeFileSync('music/index.html', html);
+    // 写入文件
+    console.log('Writing to music/index.html...');
+    await fs.writeFile('music/index.html', html);
+    console.log('Successfully wrote music/index.html');
+  } catch (error) {
+    console.error('Error generating index.html:', error);
+    process.exit(1);
+  }
 }
 
-generateIndex().catch(console.error);
+generateIndex();
