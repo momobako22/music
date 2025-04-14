@@ -1,6 +1,6 @@
 name: Deploy Issues to Index
 on:
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:  # 手动触发
 
 jobs:
   build-and-deploy:
@@ -16,16 +16,19 @@ jobs:
         with:
           node-version: '16'
 
-      # 安装依赖（marked 用于 Markdown 渲染）
+      # 安装依赖
       - name: Install Dependencies
-        run: npm install marked
+        run: npm install marked node-fetch@2
+
+      # 创建 music 目录
+      - name: Create music directory
+        run: mkdir -p music
 
       # 获取 Issues 并生成 index.html
       - name: Generate index.html
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          node .github/scripts/generate-index.js > music/index.html
+        run: node .github/scripts/generate-index.js
 
       # 提交生成的 index.html
       - name: Commit and Push
@@ -33,5 +36,5 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add music/index.html
-          git commit -m "Update index.html with Issues content"
+          git commit -m "Update index.html with Issues content" || echo "No changes to commit"
           git push
