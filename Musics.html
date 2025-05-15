@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="https://img.momobako.me/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #121212;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+    }
+    .music-player {
+      display: flex;
+      align-items: center;
+      background: #181818;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      padding: 18px;
+      max-width: 420px;
+      margin: 24px auto;
+      position: relative;
+    }
+    .music-cover {
+      width: 96px;
+      height: 96px;
+      border-radius: 12px;
+      object-fit: cover;
+      margin-right: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .music-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .music-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .music-artist {
+      font-size: 1em;
+      color: #b3b3b3;
+      margin-bottom: 8px;
+    }
+    audio {
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+      outline: none;
+    }
+    audio::-webkit-media-controls-panel {
+      background-color: #222;
+      border-radius: 8px;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .control-btn {
+      background: none;
+      border: none;
+      color: #b3b3b3;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .control-btn:hover, .control-btn.active {
+      color: #fff;
+    }
+    .playlist-btn {
+      background: none;
+      border: none;
+      color: #b3b3b3;
+      font-size: 1.2em;
+      cursor: pointer;
+      position: absolute;
+      right: 18px;
+      top: 18px;
+    }
+    .playlist-btn:hover {
+      color: #fff;
+    }
+    .playlist {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      background: #222;
+      border-radius: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      margin-bottom: 10px;
+    }
+    .playlist.show {
+      display: block;
+    }
+    .playlist-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 18px;
+      cursor: pointer;
+      border-bottom: 1px solid #333;
+    }
+    .playlist-item:hover, .playlist-item.active {
+      background: #333;
+    }
+    .playlist-item span {
+      color: #b3b3b3;
+    }
+    .playlist-item.active span {
+      color: #fff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="music-player">
+    <img class="music-cover" src="https://via.placeholder.com/96" alt="封面">
+    <div class="music-info">
+      <div class="music-title">歌曲标题</div>
+      <div class="music-artist">歌手名</div>
+      <audio controls id="audio-player" preload="none">
+        <source src="https://example.com/music.mp3" type="audio/mp3">
+        您的浏览器不支持 audio 标签。
+      </audio>
+      <div class="controls">
+        <button class="control-btn" id="random-btn" title="随机播放">🔀</button>
+        <button class="control-btn" id="loop-btn" title="列表循环">🔁</button>
+        <button class="control-btn" id="single-loop-btn" title="单曲循环">🔂</button>
+      </div>
+    </div>
+    <button class="playlist-btn" id="playlist-toggle">📜</button>
+    <div class="playlist" id="playlist">
+      <!-- 动态生成歌单 -->
+    </div>
+  </div>
+
+  <script>
+    const audio = document.getElementById('audio-player');
+    const musicCover = document.querySelector('.music-cover');
+    const musicTitle = document.querySelector('.music-title');
+    const musicArtist = document.querySelector('.music-artist');
+    const randomBtn = document.getElementById('random-btn');
+    const loopBtn = document.getElementById('loop-btn');
+    const singleLoopBtn = document.getElementById('single-loop-btn');
+    const playlistToggle = document.getElementById('playlist-toggle');
+    const playlist = document.getElementById('playlist');
+
+    // 歌曲列表
+    const songs = [
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲1',
+        artist: '歌手A',
+        src: 'https://example.com/song1.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover1'
+      },
+      {
+        title: '歌曲2',
+        artist: '歌手B',
+        src: 'https://example.com/song2.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover2'
+      },
+      {
+        title: '歌曲3',
+        artist: '歌手C',
+        src: 'https://example.com/song3.mp3',
+        cover: 'https://via.placeholder.com/96?text=Cover3'
+      }
+    ];
+
+    let currentSongIndex = 0;
+    let playbackMode = 'loop'; // loop, random, single
+
+    // 初始化播放列表
+    function renderPlaylist() {
+      playlist.innerHTML = '';
+      songs.forEach((song, index) => {
+        const item = document.createElement('div');
+        item.classList.add('playlist-item');
+        if (index === currentSongIndex) item.classList.add('active');
+        item.innerHTML = `
+          <span>${song.title} - ${song.artist}</span>
+        `;
+        item.addEventListener('click', () => playSong(index));
+        playlist.appendChild(item);
+      });
+    }
+
+    // 播放歌曲
+    function playSong(index) {
+      currentSongIndex = index;
+      const song = songs[index];
+      audio.src = song.src;
+      musicCover.src = song.cover;
+      musicTitle.textContent = song.title;
+      musicArtist.textContent = song.artist;
+      audio.play();
+      updatePlaylistUI();
+    }
+
+    // 更新播放列表UI
+    function updatePlaylistUI() {
+      const items = playlist.querySelectorAll('.playlist-item');
+      items.forEach((item, index) => {
+        item.classList.toggle('active', index === currentSongIndex);
+      });
+    }
+
+    // 切换播放模式
+    function setPlaybackMode(mode) {
+      playbackMode = mode;
+      randomBtn.classList.toggle('active', mode === 'random');
+      loopBtn.classList.toggle('active', mode === 'loop');
+      singleLoopBtn.classList.toggle('active', mode === 'single');
+      audio.loop = mode === 'single';
+    }
+
+    // 下一首
+    function playNext() {
+      if (playbackMode === 'random') {
+        currentSongIndex = Math.floor(Math.random() * songs.length);
+      } else {
+        currentSongIndex = (currentSongIndex + 1) % songs.length;
+      }
+      playSong(currentSongIndex);
+    }
+
+    // 事件监听
+    randomBtn.addEventListener('click', () => setPlaybackMode('random'));
+    loopBtn.addEventListener('click', () => setPlaybackMode('loop'));
+    singleLoopBtn.addEventListener('click', () => setPlaybackMode('single'));
+    playlistToggle.addEventListener('click', () => playlist.classList.toggle('show'));
+    audio.addEventListener('ended', () => {
+      if (playbackMode !== 'single') playNext();
+    });
+
+    // 初始化
+    renderPlaylist();
+    playSong(currentSongIndex);
+    setPlaybackMode('loop');
+  </script>
+</body>
+</html>
